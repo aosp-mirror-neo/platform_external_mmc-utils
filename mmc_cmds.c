@@ -2207,18 +2207,21 @@ int do_sanitize(int nargs, char **argv)
 
 #define DO_IO(func, fd, buf, nbyte)					\
 	({												\
-		ssize_t ret = 0, r;							\
+		size_t done = 0;							\
+		ssize_t r;									\
 		do {										\
-			r = func(fd, buf + ret, nbyte - ret);	\
-			if (r < 0 && errno != EINTR) {			\
-				ret = -1;							\
+			r = func(fd, (char *)(buf) + done,		\
+				 (nbyte) - done);					\
+			if (r < 0) {							\
+				if (errno == EINTR)					\
+					continue;						\
+				done = (size_t)-1;					\
 				break;								\
 			}										\
-			else if (r > 0)							\
-				ret += r;							\
-		} while (r != 0 && (size_t)ret < nbyte);	\
+			done += (size_t)r;						\
+		} while (r != 0 && done < (size_t)(nbyte));	\
 													\
-		ret;										\
+		(ssize_t)done;								\
 	})
 
 #define RPMB_MULTI_CMD_MAX_CMDS 3
